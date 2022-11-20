@@ -1,0 +1,7 @@
+requirements.txt
+*.zip
+.git/*
+.git
+.mypy_cache/*
+*/.mypy_cache
+wandb
