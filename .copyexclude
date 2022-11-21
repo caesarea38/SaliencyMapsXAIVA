@@ -5,3 +5,4 @@ requirements.txt
 .mypy_cache/*
 */.mypy_cache
 wandb
+*/__pycache__

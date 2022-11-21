@@ -13,10 +13,11 @@ from torch.optim import SGD, lr_scheduler
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from utils.utils import AverageMeter, get_mean_lr
+import shutil
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-def train(model, train_loader, val_loader, test_loader, args):
+def train(model, train_loader, val_loader, args):
     optimizer = SGD(
         model.parameters(),
         lr=args.lr, 
@@ -36,14 +37,13 @@ def train(model, train_loader, val_loader, test_loader, args):
         val_loss_record = AverageMeter()
         train_acc_record = AverageMeter()
         val_acc_record = AverageMeter()
-        test_acc_record = AverageMeter()
         best_val_acc = 0
         model.train()
 
         for batch_idx, batch in enumerate(tqdm(train_loader)):
             images, class_labels, uq_idxs = batch
-            images = images.to(device)
-            class_labels = class_labels.to(device)
+            images = images.to(args.device)
+            class_labels = class_labels.to(args.device)
 
             # Extract features and output after linear classifier with model
             features, out = model(images)
@@ -66,8 +66,8 @@ def train(model, train_loader, val_loader, test_loader, args):
         with torch.no_grad():
             for batch_idx, batch in enumerate(tqdm(val_loader)):
                 images, class_labels, uq_idxs = batch
-                images = images.to(device)
-                class_labels = class_labels.to(device)
+                images = images.to(args.device)
+                class_labels = class_labels.to(args.device)
 
                 # Extract features and output after linear classifier with model
                 features, out = model(images)
@@ -93,38 +93,71 @@ def train(model, train_loader, val_loader, test_loader, args):
         # Step schedule
         exp_lr_scheduler.step()
 
-        #torch.save(model.state_dict(), args.model_checkpoint_dir + 'model.pt')
-        print("model saved to {model_checkpoint_dir}")
+        # TODO: Development/Debugging
+        #model_checkpoint_path = os.path.join('/xaiva_dev/saved_models/checkpoints', str(epoch))
+        #model_best_path = os.path.join('/xaiva_dev/saved_models', 'best')
+
+        model_checkpoint_path = os.path.join('/workspace/saved_models/checkpoints', str(epoch))
+        model_best_path = os.path.join('/workspace/saved_models', 'best')
+
+        torch.save(model.state_dict(), model_checkpoint_path + '/model.pt')
+        print(f"model saved to {model_checkpoint_path}")
 
         if val_acc_record.avg > best_val_acc:
             best_val_acc = val_acc_record.avg
             print(f'Best Acc on validation set: {best_val_acc}...')
-            #torch.save(model.state_dict(), model_best_dir + 'model_best.pt')
-            #print(f"model saved to {model_best_dir}")
+            torch.save(model.state_dict(), model_best_path + '/model_best.pt')
+            print(f"Best model saved to {model_best_path}")
+
+def test(model, test_loader, args):
+    test_acc_record = AverageMeter()
+    test_loss_record = AverageMeter()
+    model.eval()
+    with torch.no_grad():
+        for batch_idx, batch in enumerate(tqdm(test_loader)):
+            images, class_labels, uq_idxs = batch
+            images = images.to(args.device)
+            class_labels = class_labels.to(args.device)
+
+            # Extract features and output after linear classifier with model
+            features, out = model(images)
+            loss = torch.nn.CrossEntropyLoss()(out, class_labels)
+
+            # Test acc
+            _, pred = out.max(1)
+            acc = (pred == class_labels).float().mean().item()
+            test_acc_record.update(acc, pred.size(0))
+
+            test_loss_record.update(loss.item(), class_labels.size(0))
+        print(f'Test Avg Loss: {test_loss_record.avg} | Acc: {test_acc_record.avg}')
+        wandb.log({
+            "Test Loss":test_loss_record.avg,
+            "Test Accuracy":test_acc_record.avg,
+        })
+
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='sm_viz',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--batch_size', default=64, type=int)
+    parser.add_argument('--batch_size', default=128, type=int)
     parser.add_argument('--num_workers', default=16, type=int)
-    parser.add_argument('--dataset_name', type=str, default='cub200', help='options: cifar10, cifar100, cub200, inat21')
+    parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, cub200, inat21')
     parser.add_argument('--model_name', type=str, default='resnet18')
     parser.add_argument('--grad_from_block', type=int, default=11)
     parser.add_argument('--lr', type=float, default=0.1)
     parser.add_argument('--gamma', type=float, default=0.1)
     parser.add_argument('--momentum', type=float, default=0.9)
     parser.add_argument('--weight_decay', type=float, default=1e-4)
-    parser.add_argument('--epochs', default=10, type=int)
-    parser.add_argument('--transform', type=str, default='imagenet', choices=['imagenet', 'pytorch-cifar'])
+    parser.add_argument('--epochs', default=0, type=int)
+    parser.add_argument('--transform', type=str, default='pytorch-cifar', choices=['imagenet', 'pytorch-cifar'])
     parser.add_argument('--seed', default=1, type=int)
-    parser.add_argument('--save_path', default='xaiva_dev', type=str)
 
     # ----------------------
     # INIT
     # ----------------------
     args = parser.parse_args()
-    device = torch.device('cuda:0')
+    args.device = torch.device('cuda:0')
     args = get_dataset_setting(args)
     print(args)
     wandb.login(key='3ad3d9b0536a3bb4aaf094b66988694b84787192')
@@ -133,12 +166,32 @@ if __name__ == "__main__":
       "args": args,
     }
 
+    # create folders for saving the model per epoch and the best model throughout the training based on some metric
+    model_save_dir = os.path.join('/workspace', 'saved_models')
+    if not os.path.exists(model_save_dir):
+        os.mkdir(model_save_dir)
+        os.mkdir(os.path.join(model_save_dir, 'checkpoints'))
+        os.mkdir(os.path.join(model_save_dir, 'best'))
+        for i in range(args.epoch):
+            os.mkdir(os.path.join(model_save_dir, 'checkpoints', str(i)))
+    
+    # TODO: Development/Debugging
+    #model_save_dir = os.path.join('/xaiva_dev', 'saved_models')
+    #if not os.path.exists(model_save_dir):
+    #shutil.rmtree(model_save_dir) 
+    #os.mkdir(model_save_dir)
+    #os.mkdir(os.path.join(model_save_dir, 'checkpoints'))
+    #os.mkdir(os.path.join(model_save_dir, 'best'))
+    #for i in range(args.epochs):
+    #    print(i)
+    #    os.mkdir(os.path.join(model_save_dir, 'checkpoints', str(i)))
+    
     # ----------------------
     # BASE MODEL
     # ----------------------
     
     if args.model_name == 'resnet18':
-        model = ResNet(BasicBlock, [2,2,2,2], args.num_classes).to(device)
+        model = ResNet(BasicBlock, [2,2,2,2], args.num_classes).to(args.device)
     else:
         raise NotImplementedError
 
@@ -164,13 +217,22 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True, drop_last=True)
     val_loader = DataLoader(val_dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False, drop_last=True)
     test_loader = DataLoader(test_dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False, drop_last=True)
-	# ----------------------
+	
+    # ----------------------
     # TRAIN
     # ----------------------
     train(
         model, 
         train_loader, 
         val_loader, 
-        test_loader, 
+        args
+    )
+
+    # ----------------------
+    # TEST
+    # ----------------------
+    test(
+        model,
+        test_loader,
         args
     )
