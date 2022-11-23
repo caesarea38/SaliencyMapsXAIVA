@@ -16,6 +16,7 @@ class AverageMeter(object):
         self.avg = 0
         self.sum = 0
         self.count = 0
+        self.all_values_avg = []
 
     def update(self, val, n=1):
 
@@ -23,7 +24,7 @@ class AverageMeter(object):
         self.sum += val * n
         self.count += n
         self.avg = self.sum / self.count
-
+        self.all_values_avg.append(self.avg)
 
 class Identity(nn.Module):
     def __init__(self):

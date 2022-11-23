@@ -172,7 +172,7 @@ if __name__ == "__main__":
         os.mkdir(model_save_dir)
         os.mkdir(os.path.join(model_save_dir, 'checkpoints'))
         os.mkdir(os.path.join(model_save_dir, 'best'))
-        for i in range(args.epoch):
+        for i in range(args.epochs):
             os.mkdir(os.path.join(model_save_dir, 'checkpoints', str(i)))
     
     # TODO: Development/Debugging

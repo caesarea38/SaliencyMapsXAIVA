@@ -2,7 +2,7 @@
 default_value ENROOT_IMAGE_HOME "/enroot_share/${USER}"
 
 # output enroot tag
-default_value TARGET_TAG "xaiva"
+default_value TARGET_TAG "xaiva_streamlit"
 
 # output enroot .sqsh file (usually ${TARGET_TAG}.sqsh)
 default_value TARGET_SQSH "${TARGET_TAG}.sqsh"

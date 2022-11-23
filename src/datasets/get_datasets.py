@@ -3,6 +3,7 @@ from datasets.cifar import CUSTOMCIFAR10, CUSTOMCIFAR100
 from datasets.cub import CUSTOMCUB2011
 import numpy as np
 from copy import deepcopy
+from torch.utils.data import DataLoader
 
 dataset_names = ['cub200', 'cifar10', 'cifar100', 'inat21']
 
@@ -12,29 +13,17 @@ def subsample_dataset(dataset, idxs):
         dataset.uq_idxs = dataset.uq_idxs[idxs]
         return dataset
 
-def get_val_test_indices(dataset_name, dataset, val_split=0.3):
-    if dataset_name == 'cifar10':
-        classes = np.unique(dataset.targets)
-        val_idxs = []
-        test_idxs = []
-        for cls in classes:
-            cls_idxs = np.where(dataset.targets == cls)[0]
-            v_ = np.random.choice(cls_idxs, replace=False, size=((int(val_split * len(cls_idxs))),))
-            t_ = [x for x in cls_idxs if x not in v_]
-            val_idxs.extend(v_)
-            test_idxs.extend(t_)
-        return val_idxs, test_idxs
-    elif dataset_name == 'cub200':
-        classes = np.unique(dataset.targets)
-        val_idxs = []
-        test_idxs = []
-        for cls in classes:
-            cls_idxs = np.where(dataset.targets == cls)[0]
-            v_ = np.random.choice(cls_idxs, replace=False, size=((int(val_split * len(cls_idxs))),))
-            t_ = [x for x in cls_idxs if x not in v_]
-            val_idxs.extend(v_)
-            test_idxs.extend(t_)
-        return val_idxs, test_idxs
+def get_val_test_indices(dataset, val_split=0.3):
+    classes = np.unique(dataset.targets)
+    val_idxs = []
+    test_idxs = []
+    for cls in classes:
+        cls_idxs = np.where(dataset.targets == cls)[0]
+        v_ = np.random.choice(cls_idxs, replace=False, size=((int(val_split * len(cls_idxs))),))
+        t_ = [x for x in cls_idxs if x not in v_]
+        val_idxs.extend(v_)
+        test_idxs.extend(t_)
+    return val_idxs, test_idxs
 
 def get_dataset_setting(args):
     if args.dataset_name in ['cifar10', 'cifar100']:
@@ -47,8 +36,13 @@ def get_dataset_setting(args):
         args.crop_pct = 0.875
     return args
 
+def get_dataloader(train_dataset, val_dataset, test_dataset, args):
+    train_loader = DataLoader(train_dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=True, drop_last=True)
+    val_loader = DataLoader(val_dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False, drop_last=True)
+    test_loader = DataLoader(test_dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False, drop_last=True)
+    return train_loader, val_loader, test_loader
+    
 def get_datasets(dataset_name, train_transform, test_transform, args):
-
     """
     :return: train_dataset,
              val_dataset,
@@ -70,22 +64,8 @@ def get_datasets(dataset_name, train_transform, test_transform, args):
     else:
         raise(NotImplementedError)
 
-    val_idxs, test_idxs = get_val_test_indices(dataset_name, test_dataset, val_split=0.3)
+    val_idxs, test_idxs = get_val_test_indices(test_dataset)
     val_dataset = subsample_dataset(dataset=deepcopy(test_dataset), idxs=val_idxs)
     test_dataset = subsample_dataset(dataset=deepcopy(test_dataset), idxs=test_idxs)
     
     return train_dataset, val_dataset, test_dataset
-
-if __name__ == '__main__':
-        test_dataset = CUSTOMCUB2011(
-            root=cub_root,
-            transform=None,
-            train=False,
-            download=False
-        ) 
-        val_idxs, test_idxs = get_val_test_indices('cub200', test_dataset, val_split=0.3)
-        val_dataset = subsample_dataset(deepcopy(test_dataset), val_idxs)
-        test_dataset = subsample_dataset(deepcopy(test_dataset), test_idxs)
-        print(len(val_dataset))
-        print(len(test_dataset))
-        print(test_dataset[0])
