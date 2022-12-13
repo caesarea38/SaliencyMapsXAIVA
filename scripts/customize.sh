@@ -46,6 +46,7 @@ function container_mounts() {
     echo "${MOUNT}":"/ssd1"
     echo "/home/furkan/smxaiva_dev":"/xaiva_dev"
     echo "/home/furkan/datasets":"/datasets"
+    echo "/home/furkan/fonts/open-sans":"/fonts"
 
 }
 

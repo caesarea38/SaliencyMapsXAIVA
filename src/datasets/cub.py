@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from copy import deepcopy
 from torchvision.datasets.folder import default_loader
+from torchvision.datasets.folder import pil_loader
 from torchvision.datasets.utils import download_url
 from torch.utils.data import Dataset
 from project_config import cub_root
@@ -21,6 +22,7 @@ class CUSTOMCUB2011(Dataset):
         self.target_transform = target_transform
 
         self.loader = loader
+        self.pil_loader = pil_loader
         self.train = train
 
         if download:
@@ -86,8 +88,9 @@ class CUSTOMCUB2011(Dataset):
         #target = sample.target - 1  # Targets start at 1 by default, so shift to 0
         target = self.targets[idx] - 1
         img = self.loader(path)
+        img_pil = pil_loader(path)
 
         if self.transform is not None:
             img = self.transform(img)
 
-        return img, target, self.uq_idxs[idx]
+        return img, target, self.uq_idxs[idx], img_pil

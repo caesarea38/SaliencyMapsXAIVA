@@ -31,13 +31,12 @@ def train(model, train_loader, val_loader, args):
             eta_min=args.lr * 1e-3,
         )
 
+    train_loss_record = AverageMeter()
+    val_loss_record = AverageMeter()
+    train_acc_record = AverageMeter()
+    val_acc_record = AverageMeter()
+    best_val_acc = 0
     for epoch in range(args.epochs):
-
-        train_loss_record = AverageMeter()
-        val_loss_record = AverageMeter()
-        train_acc_record = AverageMeter()
-        val_acc_record = AverageMeter()
-        best_val_acc = 0
         model.train()
 
         for batch_idx, batch in enumerate(tqdm(train_loader)):
@@ -63,6 +62,7 @@ def train(model, train_loader, val_loader, args):
         
         # Evaluate on the validation set
         print('Evaluating on the disjoint validation set...')
+        model.eval()
         with torch.no_grad():
             for batch_idx, batch in enumerate(tqdm(val_loader)):
                 images, class_labels, uq_idxs = batch
@@ -94,11 +94,11 @@ def train(model, train_loader, val_loader, args):
         exp_lr_scheduler.step()
 
         # TODO: Development/Debugging
-        #model_checkpoint_path = os.path.join('/xaiva_dev/saved_models/checkpoints', str(epoch))
-        #model_best_path = os.path.join('/xaiva_dev/saved_models', 'best')
+        model_checkpoint_path = os.path.join('/xaiva_dev/saved_models/checkpoints', str(epoch))
+        model_best_path = os.path.join('/xaiva_dev/saved_models', 'best')
 
-        model_checkpoint_path = os.path.join('/workspace/saved_models/checkpoints', str(epoch))
-        model_best_path = os.path.join('/workspace/saved_models', 'best')
+        #model_checkpoint_path = os.path.join('/workspace/saved_models/checkpoints', str(epoch))
+        #model_best_path = os.path.join('/workspace/saved_models', 'best')
 
         torch.save(model.state_dict(), model_checkpoint_path + '/model.pt')
         print(f"model saved to {model_checkpoint_path}")
@@ -135,7 +135,6 @@ def test(model, test_loader, args):
             "Test Accuracy":test_acc_record.avg,
         })
 
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='sm_viz',
@@ -146,12 +145,12 @@ if __name__ == "__main__":
     parser.add_argument('--model_name', type=str, default='resnet18')
     parser.add_argument('--grad_from_block', type=int, default=11)
     parser.add_argument('--lr', type=float, default=0.1)
-    parser.add_argument('--gamma', type=float, default=0.1)
     parser.add_argument('--momentum', type=float, default=0.9)
     parser.add_argument('--weight_decay', type=float, default=1e-4)
     parser.add_argument('--epochs', default=0, type=int)
     parser.add_argument('--transform', type=str, default='pytorch-cifar', choices=['imagenet', 'pytorch-cifar'])
     parser.add_argument('--seed', default=1, type=int)
+    parser.add_argument('--save_path', default='xaiva_dev', type=str)
 
     # ----------------------
     # INIT
@@ -167,24 +166,24 @@ if __name__ == "__main__":
     }
 
     # create folders for saving the model per epoch and the best model throughout the training based on some metric
-    model_save_dir = os.path.join('/workspace', 'saved_models')
+    """model_save_dir = os.path.join('/workspace', 'saved_models')
     if not os.path.exists(model_save_dir):
         os.mkdir(model_save_dir)
         os.mkdir(os.path.join(model_save_dir, 'checkpoints'))
         os.mkdir(os.path.join(model_save_dir, 'best'))
-        for i in range(args.epochs):
-            os.mkdir(os.path.join(model_save_dir, 'checkpoints', str(i)))
+        for i in range(args.epoch):
+            os.mkdir(os.path.join(model_save_dir, 'checkpoints', i))"""
     
     # TODO: Development/Debugging
-    #model_save_dir = os.path.join('/xaiva_dev', 'saved_models')
+    model_save_dir = os.path.join('/xaiva_dev', 'saved_models')
     #if not os.path.exists(model_save_dir):
-    #shutil.rmtree(model_save_dir) 
-    #os.mkdir(model_save_dir)
-    #os.mkdir(os.path.join(model_save_dir, 'checkpoints'))
-    #os.mkdir(os.path.join(model_save_dir, 'best'))
-    #for i in range(args.epochs):
-    #    print(i)
-    #    os.mkdir(os.path.join(model_save_dir, 'checkpoints', str(i)))
+    shutil.rmtree(model_save_dir) 
+    os.mkdir(model_save_dir)
+    os.mkdir(os.path.join(model_save_dir, 'checkpoints'))
+    os.mkdir(os.path.join(model_save_dir, 'best'))
+    for i in range(args.epochs):
+        print(i)
+        os.mkdir(os.path.join(model_save_dir, 'checkpoints', str(i)))
     
     # ----------------------
     # BASE MODEL
