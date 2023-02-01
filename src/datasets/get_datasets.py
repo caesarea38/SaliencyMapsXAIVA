@@ -4,6 +4,10 @@ from datasets.cub import CUSTOMCUB2011
 import numpy as np
 from copy import deepcopy
 from torch.utils.data import DataLoader
+import os
+import torch
+import pickle
+import gzip
 
 dataset_names = ['cub200', 'cifar10', 'cifar100', 'inat21']
 
@@ -28,12 +32,14 @@ def get_val_test_indices(dataset, val_split=0.3):
 def get_dataset_setting(args):
     if args.dataset_name in ['cifar10', 'cifar100']:
         args.image_size = 32
+        args.transform = 'pytorch-cifar'
         args.num_classes = 10 if args.dataset_name == 'cifar10' else 100
     elif args.dataset_name == 'cub200':
         args.image_size = 224
         args.num_classes = 200
         args.interpolation = 3
         args.crop_pct = 0.875
+        args.transform = 'imagenet'
     return args
 
 def get_dataloader(train_dataset, val_dataset, test_dataset, args):
@@ -42,7 +48,7 @@ def get_dataloader(train_dataset, val_dataset, test_dataset, args):
     test_loader = DataLoader(test_dataset, num_workers=args.num_workers, batch_size=args.batch_size, shuffle=False, drop_last=True)
     return train_loader, val_loader, test_loader
     
-def get_datasets(dataset_name, train_transform, test_transform, args):
+def get_datasets(dataset_name, train_transform, test_transform):
     """
     :return: train_dataset,
              val_dataset,

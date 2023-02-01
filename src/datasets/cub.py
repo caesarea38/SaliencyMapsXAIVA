@@ -88,9 +88,16 @@ class CUSTOMCUB2011(Dataset):
         #target = sample.target - 1  # Targets start at 1 by default, so shift to 0
         target = self.targets[idx] - 1
         img = self.loader(path)
-        img_pil = pil_loader(path)
 
         if self.transform is not None:
             img = self.transform(img)
 
-        return img, target, self.uq_idxs[idx], img_pil
+        return img, target, self.uq_idxs[idx]
+    
+    def get_pil_image(self, idx):
+        sample = self.data[idx]
+        path = os.path.join(self.root, self.base_folder, sample)
+        target = self.targets[idx] - 1
+        img_pil = pil_loader(path)
+        return img_pil, target
+

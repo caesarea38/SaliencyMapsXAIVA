@@ -2,6 +2,9 @@ from torchvision.datasets import CIFAR10, CIFAR100
 from copy import deepcopy
 import numpy as np
 import math
+from PIL import Image
+from torchvision.transforms.functional import normalize, resize, to_pil_image, to_tensor
+
 
 class CUSTOMCIFAR10(CIFAR10):
 
@@ -17,6 +20,10 @@ class CUSTOMCIFAR10(CIFAR10):
     def __len__(self):
         return len(self.targets)
 
+    def get_pil_image(self, item):
+        img = self.data[item]
+        img_pil = Image.fromarray(img)
+        return img_pil, 0
 
 class CUSTOMCIFAR100(CIFAR100):
 
@@ -31,3 +38,8 @@ class CUSTOMCIFAR100(CIFAR100):
 
     def __len__(self):
         return len(self.targets)
+    
+    def get_pil_image(self, item):
+        img = self.data[item]
+        img_pil = Image.fromarray(img)
+        return img_pil

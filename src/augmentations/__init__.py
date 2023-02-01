@@ -2,14 +2,14 @@ from torchvision import transforms
 from augmentations.randaugment import RandAugment
 import torch
 
-def get_transform(transform_type='default', image_size=32, args=None):
+def get_transform(transform_type='default', image_size=32, interpolation=3, crop_pct=0.875, args=None):
 
     if transform_type == 'imagenet':
 
         mean = (0.485, 0.456, 0.406)
         std = (0.229, 0.224, 0.225)
-        interpolation = args.interpolation
-        crop_pct = args.crop_pct
+        interpolation = interpolation
+        crop_pct = crop_pct
 
         train_transform = transforms.Compose([
             transforms.Resize(int(image_size / crop_pct), interpolation),

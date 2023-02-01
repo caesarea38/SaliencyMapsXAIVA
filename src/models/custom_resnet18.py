@@ -11,6 +11,17 @@ import os.path
 import datetime
 import numpy as np
 
+def weights_init(m):
+    if isinstance(m, nn.Conv2d):
+        torch.nn.init.constant_(m.weight.data, 0.0)
+    elif isinstance(m, nn.BatchNorm2d):
+        #m.weight.data.normal_(mean=1.0, std=0.02)
+        torch.nn.init.constant_(m.weight.data, 0.0)
+        m.bias.data.fill_(0)
+    elif isinstance(m, nn.Linear):
+        torch.nn.init.constant_(m.weight.data, 0.0)
+        #m.weight.data.normal_(0.0, 0.02)
+        m.bias.data.fill_(0)
 
 class ResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10):
@@ -43,7 +54,7 @@ class ResNet(nn.Module):
         out = F.adaptive_avg_pool2d(out, 1)
         out_features = out.view(out.size(0), -1)
         out = self.linear(out_features)
-        return out_features, out
+        return out
 
 class BasicBlock(nn.Module):
     expansion = 1
