@@ -21,7 +21,7 @@ streamlit==1.15.0
 altair==4.2.0
 plotly==5.11.0
 ipywidgets>=7.0.0 
-torchcam==3.2.0
+torchcam==0.3.2
 saliency==0.2.0
 
 
