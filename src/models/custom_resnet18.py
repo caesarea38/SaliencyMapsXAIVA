@@ -27,7 +27,6 @@ class ResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10):
         super(ResNet, self).__init__()
         self.in_planes = 64
-
         self.conv1    = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1      = nn.BatchNorm2d(64)
         self.layer1   = self._make_layer(block, 64, num_blocks[0], stride=1)
@@ -44,8 +43,21 @@ class ResNet(nn.Module):
             self.in_planes = planes * block.expansion
         return nn.Sequential(*layers)
 
-    def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
+    def forward(self, x, use_input_variance=False, variance=5):
+        
+        if use_input_variance:
+            c = variance
+            x = x + torch.randn_like(x) * c
+            #x = x + c
+            x = self.conv1(x)
+            out = x - torch.mean(x, dim=(2, 3), keepdim=True)
+            #out = x - c
+        else:
+            out = self.conv1(x)
+
+        out = self.bn1(out)
+        out = F.relu(out)
+
         out = self.layer1(out)
         out = self.layer2(out)
         out = self.layer3(out)
@@ -58,7 +70,7 @@ class ResNet(nn.Module):
 
 class BasicBlock(nn.Module):
     expansion = 1
-
+    
     def __init__(self, in_planes, planes, stride=1):
         super(BasicBlock, self).__init__()
         self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
@@ -78,7 +90,7 @@ class BasicBlock(nn.Module):
 
         if self.is_padding:
             shortcut = self.shortcut(x)
-            out += torch.cat([shortcut,torch.zeros(shortcut.shape).type(torch.cuda.FloatTensor)],1)
+            out += torch.cat([shortcut,torch.zeros(shortcut.shape).type(torch.cuda.FloatTensor)],1) if torch.cuda.is_available() else torch.cat([shortcut,torch.zeros(shortcut.shape)],1)
         else:
             out += self.shortcut(x)
 

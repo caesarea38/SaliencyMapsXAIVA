@@ -47,6 +47,7 @@ if __name__ == "__main__":
     torch.cuda.manual_seed(1)
     np.random.seed(1)
     random.seed(1)
+
     # ----------------------
     # UI SETUP
     # ----------------------
@@ -322,7 +323,7 @@ if __name__ == "__main__":
             
             cols = st.columns(spec=4, gap='medium')
 
-            # take all predictions from all epochs and find the positions where the prediction was always the same, regardless of whether they were correct or not
+            # take all predictions from all epochs and find the positions where the prediction was always the same, regardless of whether it was correct or not
             predictions_all_epochs = [st.session_state.training_monitoring['predictions'][i][1] for i in st.session_state.training_monitoring['predictions']]
             solution = np.where(np.all(np.array(predictions_all_epochs) == predictions_all_epochs[0], axis=0))[0]
             solution = np.random.choice(solution, replace=False, size=4).tolist()
@@ -376,7 +377,7 @@ if __name__ == "__main__":
                         cols[i].image(explanations[image_count], clamp=True, use_column_width=True, width=300)
                         image_count+=1
 
-                st.markdown(f"<div align=center> <span style=color:white;text-align:center;>Github source code for saliency maps: <a href='https://github.com/frgfm/torch-cam'>https://github.com/frgfm/torch-cam<a></span>", unsafe_allow_html=True)
+                st.markdown(f"<div align=center> <span style=color:white;text-align:center;>f source code for saliency maps: <a href='https://github.com/frgfm/torch-cam'>https://github.com/frgfm/torch-cam<a></span>", unsafe_allow_html=True)
 
         else:
             st.info('Please train the model for at least one epoch before generating local explanations!')
@@ -424,13 +425,29 @@ if __name__ == "__main__":
             image_tensor = st.session_state['fallacy_demonstration']['dataset'][idx][0].to(args.device)
             explanations = explain(image_tensor=image_tensor.to(args.device), image_pil=image_pil, methods=['CAM', 'SmoothGradCAMpp'], model_paths=None, device=args.device, epochs_to_compare=[0], single_model=model)   
             explanations[0] = image_pil.resize((300,300))
+
             for i in range(len(cols)):
                 cols[i].image(explanations[i], clamp=True, use_column_width=True, width=300)
-            
+
             if step == 1:
                 st.markdown(f"<div align=center> <span style=color:white;font-weight:300;text-align:center;font-size:calc(6vw/5);>However, one main limitation of CAM is that it tends to generate noisy explanations. This can be seen especially for image examples with many diverse background elements. Also, CAM often fails to recognize the overall pattern of the main image element, because it highlights activations in a point-wise fashion. By adding small perturbations to the image, SmoothGradCam++ calculates multiple gradient-based visualizations for a single input and averages them to yield the final output. This has shown to be more robust for images that contain noise and this method also performs better in recognizing overall patterns. For instance: </span>", unsafe_allow_html=True)
                 cols = st.columns(spec=3, gap='medium')
 
+
+        st.markdown(f"<div align=center> <span style=color:white;font-weight:300;text-align:center;font-size:calc(6vw/5);>Another experiment considers the robustness of the saliency map method. This was shown by Adebayo et al. (2020) <a href='https://www.semanticscholar.org/paper/Sanity-Checks-for-Saliency-Maps-Adebayo-Gilmer/8dc8f3e0127adc6985d4695e9b69d04717b2fde8'>Adebayo et al. (2020)<a> for instance by checking whether the explanation method is insensitive to small variance added to the input and removed directly after the first hidden layer of the network, causing no numerical difference in the actual computation of the forward pass, but a potential difference in the computation of the explanation. Use the following slider to set the scaling value for the noise and observe how CAM produces slightly different explanations while SmoothGradCam++ shows no sensitivity to this variance. </span>", unsafe_allow_html=True)
+        slider = st.slider(label='Choose the scaling factor for the input variance', min_value=0.0, max_value=5.0, value=0.0, step=0.1)
+        cols = st.columns(spec=3, gap='medium')
+        for i in range(len(cols)):
+            cols[i].markdown(f"<div align=center> <span style=color:white;font-weight:300;text-align:center;font-size:calc(6vw/{len(cols)});>{descriptions[i]}</span>", unsafe_allow_html=True)
+        
+        for step, image in enumerate(images_to_visualize):
+            idx = int(image.split('_')[-1])
+            image_pil, _ = st.session_state['fallacy_demonstration']['dataset'].get_pil_image(idx)
+            image_tensor = st.session_state['fallacy_demonstration']['dataset'][idx][0].to(args.device)
+            explanations_with_input_variance = explain(image_tensor=image_tensor.to(args.device), image_pil=image_pil, methods=['CAM', 'SmoothGradCAMpp'], model_paths=None, device=args.device, epochs_to_compare=[0], single_model=model, use_input_variance=True, variance=slider)   
+            explanations_with_input_variance[0] = image_pil.resize((300,300))
+            for i in range(len(cols)):
+                cols[i].image(explanations_with_input_variance[i], clamp=True, use_column_width=True, width=300)
 
         st.markdown(f"<div align=center> <span style=color:white;font-weight:300;text-align:center;font-size:calc(6vw/5);>In conclusion, even though CAM can be used for fast explanation generation, it should be used with care, as perturbations and the image structure can weaken it's visualization quality. Instead, smoothing-based methods such as SmoothGradCam++ can be used to provide a more comprehensive understanding of the model's decision-making process which allows for a more thorough analysis of the model's behavior.</span>", unsafe_allow_html=True)
 
