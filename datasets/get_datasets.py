@@ -4,10 +4,6 @@ from datasets.cub import CUSTOMCUB2011
 import numpy as np
 from copy import deepcopy
 from torch.utils.data import DataLoader
-import os
-import torch
-import pickle
-import gzip
 
 dataset_names = ['cub200', 'cifar10', 'cifar100', 'inat21']
 

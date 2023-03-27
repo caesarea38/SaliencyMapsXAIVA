@@ -20,7 +20,7 @@ from utils.utils import load_model
 def get_image_from_digit(epoch):
     img = Image.new('RGB', (300,300), (14,17,23))
     draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype("/fonts/OpenSans-Regular.ttf", 150)
+    font = ImageFont.truetype("./fonts/open-sans/OpenSans-Regular.ttf", 150)
     draw.text((105, 30), str(epoch), font=font, fill="#FFF")
     return img
 

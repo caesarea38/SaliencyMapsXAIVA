@@ -2,9 +2,9 @@
 # DATASET ROOT PATHS
 # ------------------
 
-cub_root = '/ssd1/furkan/cub200'
-cifar10_root = '/ssd1/furkan/cifar10'
-cifar100_root = '/ssd1/furkan/cifar100'
+cub_root = './cub200'
+cifar10_root = './cifar10'
+cifar100_root = './cifar100'
 
 # -----------------
 # DATASET CLASS NAMES

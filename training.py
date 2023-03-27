@@ -1,18 +1,7 @@
-import argparse
-import os
 import warnings
-import numpy as np
 import torch
-import wandb
-from augmentations import get_transform
-from datasets.get_datasets import get_dataset_setting, get_datasets
-from models import custom_resnet18 as resnet18
-from models.custom_resnet18 import BasicBlock, ResNet
-from torch.nn import functional as F
-from torch.optim import SGD, lr_scheduler
+from torch.optim import SGD 
 from tqdm import tqdm
-import shutil
-import itertools
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 

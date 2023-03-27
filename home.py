@@ -22,22 +22,21 @@ from datasets.get_datasets import (get_dataloader, get_dataset_setting,
 from models.custom_resnet18 import BasicBlock, ResNet, weights_init
 from PIL import Image
 from project_config import class_names, explanation_methods
-from smexplainers import explain
-from streamlit_train import test, train
-from torch.utils.data import DataLoader
+from saliency_maps import explain
+from training import test, train
 from utils.utils import MetricsStorage, load_model
 from visualization.generate_plots import (generate_initial_plots,
                                           get_confusion_matrix, get_metrics,
                                           get_precision_recall_curve,
                                           get_roc_curve, update_plots)
 
-model_save_dir = os.path.join('/xaiva_dev', 'saved_models')
+root_dir = f'./xaiva'
+model_save_dir = os.path.join(root_dir, 'saved_models')
+model_checkpoint_dir = os.path.join(model_save_dir, 'checkpoints')
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='sm_viz', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--num_workers', default=8, type=int)
-    parser.add_argument('--grad_from_block', type=int, default=11)
     parser.add_argument('--seed', default=1, type=int)
     
     args = parser.parse_args()
@@ -58,13 +57,14 @@ if __name__ == "__main__":
 
     sidebar = st.sidebar
     sidebar.title("Training Hyperparameters")
-    args.dataset_name = sidebar.selectbox('Select the Dataset', ('cub200', 'cifar10', 'cifar100', 'iNat21'))
+    args.dataset_name = sidebar.selectbox('Select the Dataset', ('cub200', 'cifar10', 'cifar100'))
     args.epochs = sidebar.slider(label='Total Epochs', min_value=0, max_value=200, value=10, step=1)
     args.epochs_per_checkpoint = sidebar.slider(label='Checkpoint after how many epochs ?', min_value=0, max_value=10, value=1, step=1)
     args.batch_size = sidebar.slider(label='Batch Size', min_value=16, max_value=256, value=64, step=8)
     args.lr = sidebar.slider(label='Initial Learning Rate', max_value=0.5, value=0.1, step=0.01, format='%f')
     args.momentum = sidebar.slider(label='Momentum', max_value=1.0, value=0.9, step=0.1)
     args.weight_decay = sidebar.slider(label='Weight Decay', min_value=0.1e-4, max_value=1e-2, value=1e-4, step=1e-5, format='%f')
+    args.num_workers = sidebar.slider(label='Number of Workers', min_value=1, max_value=32, value=1, step=1)
     start_training = sidebar.button("Start / Continue Training")
     reset_training = sidebar.button("Reset Training")
     args = get_dataset_setting(args)
@@ -103,6 +103,11 @@ if __name__ == "__main__":
     # ----------------------
     # CREATE FOLDERS FOR THE MODELS
     # ----------------------
+    if not os.path.exists(root_dir):
+        os.mkdir(root_dir)
+    if not os.path.exists(model_save_dir):
+        os.mkdir(model_save_dir)
+
     if st.session_state.training_monitoring['epochs_trained'] == 0:
         # TODO: Development/Debugging
         shutil.rmtree(model_save_dir) 
@@ -169,7 +174,7 @@ if __name__ == "__main__":
                         update_plots(mode='training_monitoring', session_state=st.session_state)
 
                         # SAVE MODEL TO CHECKPOINT
-                        save_path = os.path.join('/xaiva_dev/saved_models/checkpoints', str(st.session_state.training_monitoring['epochs_trained']-1), 'model.pt')
+                        save_path = os.path.join(model_checkpoint_dir, str(st.session_state.training_monitoring['epochs_trained']-1), 'model.pt')
                         torch.save(model, save_path)
 
                         # UPDATE PROGRESS BAR
@@ -265,7 +270,7 @@ if __name__ == "__main__":
 
             preds = st.session_state.training_monitoring['predictions'][st.session_state.training_monitoring['epochs_trained']-1][1]
             labels = st.session_state.training_monitoring['labels'][st.session_state.training_monitoring['epochs_trained']-1]
-            path = os.path.join('/xaiva_dev/saved_models/checkpoints', str(st.session_state.training_monitoring['epochs_trained']-1), 'model.pt')
+            path = os.path.join(model_checkpoint_dir, str(st.session_state.training_monitoring['epochs_trained']-1), 'model.pt')
                         
             st.markdown(f"<div align=center> <span style=color:white;font-weight:300;text-align:center;font-size:calc(9vw/4);> Correct Classifications: </span>", unsafe_allow_html=True)
 

@@ -119,3 +119,7 @@ wandb
 IMPORTANT.txt
 
 runs
+
+cub200
+cifar10
+cifar100

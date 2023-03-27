@@ -42,4 +42,4 @@ class CUSTOMCIFAR100(CIFAR100):
     def get_pil_image(self, item):
         img = self.data[item]
         img_pil = Image.fromarray(img)
-        return img_pil
+        return img_pil, 0
